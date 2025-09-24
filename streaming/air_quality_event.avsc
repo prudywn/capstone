@@ -1,0 +1,25 @@
+{
+  "namespace": "com.airquality",
+  "type": "record",
+  "name": "AirQualityEvent",
+  "version": "1",
+  "fields": [
+    {"name": "city", "type": "string"},
+    {"name": "timestamp", "type": {
+      "type": "long",
+      "logicalType": "timestamp-millis"
+    }},
+    {"name": "pm2_5", "type": ["null", "float"], "default": null},
+    {"name": "pm10", "type": ["null", "float"], "default": null},
+    {"name": "ozone", "type": ["null", "float"], "default": null},
+    {"name": "carbon_monoxide", "type": ["null", "float"], "default": null},
+    {"name": "nitrogen_dioxide", "type": ["null", "float"], "default": null},
+    {"name": "sulphur_dioxide", "type": ["null", "float"], "default": null},
+    {"name": "uv_index", "type": ["null", "float"], "default": null},
+    {"name": "source", "type": "string"},
+    {"name": "ingest_time", "type": {
+      "type": "long",
+      "logicalType": "timestamp-millis"
+    }}
+  ]
+}

@@ -1,0 +1,133 @@
+
+services:
+
+  mongo:
+    image: mongo:6.0
+    container_name: mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    volumes:
+      - mongo-data:/data/db
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.1
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.1
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+  
+  ingestion:
+    build:
+      context: ./ingestion
+    container_name: air_quality_ingestion
+    restart: unless-stopped
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/air_quality
+      - POLL_INTERVAL_SECONDS=3600
+      - BACKFILL_DAYS=5
+    depends_on:
+      - mongo
+    ports:
+      - "8000:8000"  # expose metrics
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  streaming:
+    build:
+      context: ./streaming
+    container_name: air_quality_streaming
+    restart: unless-stopped
+    depends_on:
+      - mongo
+      - kafka
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/air_quality
+      - KAFKA_BROKER=kafka:9092
+      - KAFKA_TOPIC=air_quality_events
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.3.1
+    container_name: schema-registry
+    depends_on:
+      - kafka
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: "kafka:9092"
+      SCHEMA_REGISTRY_HOST_NAME: "schema-registry"
+      SCHEMA_REGISTRY_LISTENERS: "http://0.0.0.0:8081"
+
+  cassandra:
+    image: cassandra:4.1
+    container_name: cassandra
+    ports:
+      - "9042:9042"
+    volumes:
+      - cassandra-data:/var/lib/cassandra
+    environment:
+      CASSANDRA_CLUSTER_NAME: "AirQualityCluster"
+      CASSANDRA_NUM_TOKENS: 256
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e \"SELECT release_version FROM system.local\""]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+
+  storage:
+    build:
+      context: ./storage
+    container_name: storage_service
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      schema-registry:
+        condition: service_started
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - KAFKA_TOPIC=air_quality_events
+      - KAFKA_CONSUMER_GROUP=storage_service_group
+      - CASSANDRA_HOSTS=cassandra
+      - CASSANDRA_KEYSPACE=air_quality_keyspace
+  
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    depends_on:
+      - kafka
+      - zookeeper
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+
+
+volumes:
+  mongo-data:
+  cassandra-data:

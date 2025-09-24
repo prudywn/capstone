@@ -1,0 +1,17 @@
+confluent-kafka
+cassandra-driver
+# Core Kafka client + Schema Registry
+confluent-kafka[avro,schema-registry]==2.3.0  
+
+# MongoDB
+pymongo>=4.3.0
+
+# Required by confluent-kafka schema registry client
+attrs>=21.3.0
+cachetools>=4.0.0
+httpx>=0.23.0
+orjson>=3.6.0
+fastavro>=1.4.0   # Avro parsing/serialization
+
+# Optional but useful
+requests>=2.28.0   # sometimes needed for schema registry HTTP fallback
