@@ -15,10 +15,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy source code
 COPY . .
 
+# Create logs directory
+RUN mkdir -p /app/logs
+
 # Set environment variables for production (can be overridden)
 ENV MONGODB_URI=mongodb://mongo:27017
 ENV POLL_INTERVAL_SECONDS=3600
 ENV BACKFILL_DAYS=5
+ENV LOG_LEVEL=INFO
 
 # Expose metrics port for Prometheus scraping
 EXPOSE 8000

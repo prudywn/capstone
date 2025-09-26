@@ -10,11 +10,23 @@ insert_stmt = session.prepare("""
 """)
 
 def insert_air_quality_record(record):
-    ts = datetime.datetime.utcfromtimestamp(record['timestamp'] / 1000)
+    # Handle both datetime objects and millisecond timestamps
+    if isinstance(record['timestamp'], datetime.datetime):
+        ts = record['timestamp']
+    else:
+        ts = datetime.datetime.utcfromtimestamp(record['timestamp'] / 1000)
+    
     date_str = ts.strftime('%Y-%m-%d')
     hour = ts.hour
 
-    ingest_time = datetime.datetime.utcfromtimestamp(record['ingest_time'] / 1000) if record.get('ingest_time') else None
+    # Handle both datetime objects and millisecond timestamps for ingest_time
+    if record.get('ingest_time'):
+        if isinstance(record['ingest_time'], datetime.datetime):
+            ingest_time = record['ingest_time']
+        else:
+            ingest_time = datetime.datetime.utcfromtimestamp(record['ingest_time'] / 1000)
+    else:
+        ingest_time = None
 
     session.execute(insert_stmt, (
         record['city'],

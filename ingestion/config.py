@@ -9,7 +9,7 @@ CITIES = {
     "Mombasa": {"lat": -4.043477, "lon": 39.668206},
 }
 
-MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://mongo:27017")
 DB_NAME = os.getenv("DB_NAME", "air_quality")
 RAW_CCOLLECTION = "raw_air_quality"
 CURATED_COLLECTION = "curated_air_quality"
